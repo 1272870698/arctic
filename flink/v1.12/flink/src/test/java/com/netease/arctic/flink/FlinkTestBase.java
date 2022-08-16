@@ -19,6 +19,7 @@
 package com.netease.arctic.flink;
 
 import com.netease.arctic.TableTestBase;
+import com.netease.arctic.flink.catalog.MiniClusterResource;
 import com.netease.arctic.flink.catalog.descriptors.ArcticCatalogValidator;
 import com.netease.arctic.io.reader.GenericArcticDataReader;
 import com.netease.arctic.scan.CombinedScanTask;
@@ -53,7 +54,6 @@ import org.apache.iceberg.Schema;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.data.IdentityPartitionConverters;
 import org.apache.iceberg.data.Record;
-import org.apache.iceberg.flink.MiniClusterResource;
 import org.apache.iceberg.io.CloseableIterable;
 import org.apache.iceberg.relocated.com.google.common.collect.ImmutableList;
 import org.apache.iceberg.relocated.com.google.common.collect.ImmutableMap;

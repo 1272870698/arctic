@@ -54,7 +54,7 @@ public class ArcticLogPartitioner<T> implements Serializable {
     } else {
       helper.open();
       long hash = helper.hashKeyValue((RowData) logData.getActualValue());
-      partition = partitions[(int) (hash % partitions.length)];
+      partition = partitions[(int) (Math.abs(hash) % partitions.length)];
     }
     return partition;
   }

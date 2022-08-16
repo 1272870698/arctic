@@ -31,6 +31,7 @@ import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.HiveMetaStore;
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient;
 import org.apache.hadoop.hive.metastore.IHMSHandler;
+import org.apache.hadoop.hive.metastore.IMetaStoreClient;
 import org.apache.hadoop.hive.metastore.RetryingHMSHandler;
 import org.apache.hadoop.hive.metastore.TSetIpAddressProcessor;
 import org.apache.iceberg.common.DynConstructors;
@@ -190,7 +191,7 @@ public class HMSMockServer {
   }
 
   public void reset() throws Exception {
-    for (String dbName : clientPool.run(HiveMetaStoreClient::getAllDatabases)) {
+    for (String dbName : clientPool.run(IMetaStoreClient::getAllDatabases)) {
       for (String tblName : clientPool.run(client -> client.getAllTables(dbName))) {
         clientPool.run(client -> {
           client.dropTable(dbName, tblName, true, true, true);

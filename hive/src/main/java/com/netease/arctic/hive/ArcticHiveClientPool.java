@@ -2,6 +2,7 @@ package com.netease.arctic.hive;
 
 import com.netease.arctic.table.TableMetaStore;
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient;
+import org.apache.hadoop.hive.metastore.IMetaStoreClient;
 import org.apache.iceberg.hive.HiveClientPool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,6 +21,21 @@ public class ArcticHiveClientPool extends HiveClientPool {
   }
 
   @Override
+  protected IMetaStoreClient newClient() {
+    return metaStore.doAs(super::newClient);
+  }
+
+  @Override
+  protected IMetaStoreClient reconnect(IMetaStoreClient client) {
+    try {
+      return metaStore.doAs(() -> super.reconnect(client));
+    } catch (Exception e) {
+      LOG.error("hive metastore client reconnected failed", e);
+      throw e;
+    }
+  }
+
+  /*@Override
   protected HiveMetaStoreClient newClient() {
     return metaStore.doAs(() -> super.newClient());
   }
@@ -32,5 +48,5 @@ public class ArcticHiveClientPool extends HiveClientPool {
       LOG.error("hive metastore client reconnected failed", e);
       throw e;
     }
-  }
+  }*/
 }

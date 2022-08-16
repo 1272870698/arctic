@@ -19,12 +19,12 @@
 package com.netease.arctic.flink.table;
 
 import com.netease.arctic.flink.FlinkTestBase;
+import com.netease.arctic.flink.catalog.MiniClusterResource;
 import com.netease.arctic.flink.util.DataUtil;
 import org.apache.flink.table.api.ApiExpression;
 import org.apache.flink.table.api.DataTypes;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.test.util.MiniClusterWithClientResource;
-import org.apache.iceberg.flink.MiniClusterResource;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.ClassRule;

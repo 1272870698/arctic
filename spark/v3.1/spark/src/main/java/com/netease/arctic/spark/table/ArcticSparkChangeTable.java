@@ -35,10 +35,11 @@ public class ArcticSparkChangeTable extends SparkTable {
     super(icebergTable, true);
   }
 
-  public ArcticSparkChangeTable(Table icebergTable, StructType requestedSchema, boolean refreshEagerly) {
-    super(icebergTable, requestedSchema, refreshEagerly);
+  public ArcticSparkChangeTable(Table icebergTable,  Long snapshotId, boolean refreshEagerly) {
+    super(icebergTable, snapshotId, refreshEagerly);
   }
 
+  @Override
   public Set<TableCapability> capabilities() {
     return CAPABILITIES;
   }

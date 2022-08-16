@@ -23,6 +23,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.netease.arctic.ams.api.properties.CatalogMetaProperties;
 import com.netease.arctic.table.TableMetaStore;
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient;
+import org.apache.hadoop.hive.metastore.IMetaStoreClient;
 import org.apache.iceberg.ClientPool;
 import org.apache.iceberg.util.PropertyUtil;
 import org.apache.thrift.TException;
@@ -33,7 +34,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Cache {@link ArcticHiveClientPool} with {@link TableMetaStore} key.
  */
-public class CachedHiveClientPool implements ClientPool<HiveMetaStoreClient, TException> {
+public class CachedHiveClientPool implements ClientPool<IMetaStoreClient, TException> {
 
   private static Cache<TableMetaStore, ArcticHiveClientPool> clientPoolCache;
 
@@ -64,8 +65,35 @@ public class CachedHiveClientPool implements ClientPool<HiveMetaStoreClient, TEx
     }
   }
 
-  @Override
+/*  @Override
   public <R> R run(Action<R, HiveMetaStoreClient, TException> action) throws TException, InterruptedException {
     return clientPool().run(action);
+  }*/
+
+  @Override
+  public <R> R run(Action<R, IMetaStoreClient, TException> action) throws TException, InterruptedException {
+    return clientPool().run(action);
+  }
+
+  @Override
+  public <R> R run(Action<R, IMetaStoreClient, TException> action, boolean retry) throws TException, InterruptedException {
+    try {
+      return clientPool().run(action);
+
+    } catch (Exception exc) {
+      if (retry) {
+        try {
+          init();
+        } catch (Exception ignored) {
+          // if reconnection throws any exception, rethrow the original failure
+          throw exc;
+        }
+
+        return clientPool().run(action);
+      }
+
+      throw exc;
+
+    }
   }
 }

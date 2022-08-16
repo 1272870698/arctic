@@ -336,7 +336,7 @@ public class FlinkSink {
         TableProperties.UPSERT_ENABLED, TableProperties.UPSERT_ENABLED_DEFAULT);
     return new ArcticFileWriter(
         shufflePolicy,
-        createTaskWriterFactory(arcticTable, overwrite, flinkSchema, equalityColumns),
+        createTaskWriterFactory(arcticTable, overwrite, flinkSchema, equalityColumns, upsert),
         minFileSplitCount,
         tableLoader,
         upsert);
@@ -346,7 +346,8 @@ public class FlinkSink {
       ArcticTable arcticTable,
       boolean overwrite,
       RowType flinkSchema,
-      List<String> equalityFieldColumns) {
+      List<String> equalityFieldColumns,
+      boolean upsert) {
     if (arcticTable.isKeyedTable()) {
       return new KeyedRowDataTaskWriterFactory(arcticTable.asKeyedTable(), flinkSchema, overwrite);
     }
@@ -366,7 +367,7 @@ public class FlinkSink {
     FileFormat fileFormat = getFileFormat(arcticTable.properties());
     return new RowDataTaskWriterFactory(
         arcticTable.asUnkeyedTable(), flinkSchema, targetFileSize,
-        fileFormat, equalityFieldIds);
+        fileFormat, equalityFieldIds, upsert);
   }
 
   private static FileFormat getFileFormat(Map<String, String> properties) {

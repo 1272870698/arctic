@@ -46,6 +46,7 @@ import com.netease.arctic.utils.ConvertStructUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.iceberg.LockManager;
 import org.apache.iceberg.PartitionSpec;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.SortOrder;
@@ -60,6 +61,7 @@ import org.apache.iceberg.hadoop.HadoopTableOperations;
 import org.apache.iceberg.hadoop.HadoopTables;
 import org.apache.iceberg.relocated.com.google.common.base.Preconditions;
 import org.apache.iceberg.relocated.com.google.common.collect.ImmutableMap;
+import org.apache.iceberg.util.LockManagers;
 import org.apache.iceberg.util.PropertyUtil;
 import org.apache.thrift.TException;
 import org.slf4j.Logger;
@@ -185,15 +187,20 @@ public class BaseArcticCatalog implements ArcticCatalog {
     String baseLocation = checkLocation(tableMeta, MetaTableProperties.LOCATION_KEY_BASE);
     String changeLocation = checkLocation(tableMeta, MetaTableProperties.LOCATION_KEY_CHANGE);
 
+    Map<String, String> properties = tableMeta.properties;
+    LockManager lockManager = LockManagers.from(properties);
     ArcticFileIO fileIO = new ArcticHadoopFileIO(tableMetaStore);
     Table baseIcebergTable = tableMetaStore.doAs(() -> tables.load(baseLocation));
     BaseTable baseTable = new BaseKeyedTable.BaseInternalTable(tableIdentifier,
-        useArcticTableOperations(baseIcebergTable, baseLocation, fileIO, tableMetaStore.getConfiguration()),
+        useArcticTableOperations(baseIcebergTable, baseLocation, fileIO, tableMetaStore.getConfiguration(),
+                lockManager),
         fileIO, client);
 
     Table changeIcebergTable = tableMetaStore.doAs(() -> tables.load(changeLocation));
+
     ChangeTable changeTable = new BaseKeyedTable.ChangeInternalTable(tableIdentifier,
-        useArcticTableOperations(changeIcebergTable, changeLocation, fileIO, tableMetaStore.getConfiguration()),
+        useArcticTableOperations(changeIcebergTable, changeLocation, fileIO, tableMetaStore.getConfiguration(),
+                LockManagers.from(changeIcebergTable.properties())),
         fileIO, client);
     return new BaseKeyedTable(tableMeta, tableLocation,
         buildPrimaryKeySpec(baseTable.schema(), tableMeta), client, baseTable, changeTable);
@@ -215,9 +222,11 @@ public class BaseArcticCatalog implements ArcticCatalog {
     TableIdentifier tableIdentifier = TableIdentifier.of(tableMeta.getTableIdentifier());
     String baseLocation = checkLocation(tableMeta, MetaTableProperties.LOCATION_KEY_BASE);
     Table table = tableMetaStore.doAs(() -> tables.load(baseLocation));
+    Map<String, String> properties = tableMeta.properties;
+    LockManager lockManager = LockManagers.from(properties);
     ArcticFileIO arcticFileIO = new ArcticHadoopFileIO(tableMetaStore);
     return new BaseUnkeyedTable(tableIdentifier, useArcticTableOperations(table, baseLocation,
-        arcticFileIO, tableMetaStore.getConfiguration()), arcticFileIO, client);
+        arcticFileIO, tableMetaStore.getConfiguration(),lockManager), arcticFileIO, client);
   }
 
   protected String checkLocation(TableMeta meta, String locationKey) {
@@ -228,12 +237,12 @@ public class BaseArcticCatalog implements ArcticCatalog {
 
   protected Table useArcticTableOperations(
       Table table, String tableLocation,
-      ArcticFileIO arcticFileIO, Configuration configuration) {
+      ArcticFileIO arcticFileIO, Configuration configuration,  LockManager lockManager) {
     if (table instanceof org.apache.iceberg.BaseTable) {
       org.apache.iceberg.BaseTable baseTable = (org.apache.iceberg.BaseTable) table;
       if (baseTable.operations() instanceof HadoopTableOperations) {
         return new org.apache.iceberg.BaseTable(new ArcticHadoopTableOperations(new Path(tableLocation),
-            arcticFileIO, configuration), table.name());
+            arcticFileIO, configuration, lockManager), table.name());
       }
     }
     return table;
@@ -394,14 +403,19 @@ public class BaseArcticCatalog implements ArcticCatalog {
       return table;
     }
 
+    @Override
     public Transaction newCreateTableTransaction() {
       ArcticFileIO arcticFileIO = new ArcticHadoopFileIO(tableMetaStore);
       ConvertStructUtil.TableMetaBuilder builder = createTableMataBuilder();
       TableMeta meta = builder.build();
       String location = getTableLocationForCreate();
+
+      Map<String, String> properties = meta.properties;
+      LockManager lockManager = LockManagers.from(properties);
+
       TableOperations tableOperations = new ArcticHadoopTableOperations(new Path(location),
-          arcticFileIO, tableMetaStore.getConfiguration());
-      TableMetadata tableMetadata = tableMetadata(schema, partitionSpec, sortOrder, properties, location);
+          arcticFileIO, tableMetaStore.getConfiguration(), lockManager);
+      TableMetadata tableMetadata = tableMetadata(schema, partitionSpec, sortOrder, this.properties, location);
       Transaction transaction =
           Transactions.createTableTransaction(identifier.getTableName(), tableOperations, tableMetadata);
       return new CreateTableTransaction(
@@ -534,8 +548,10 @@ public class BaseArcticCatalog implements ArcticCatalog {
         }
       });
 
+      LockManager lockManager = LockManagers.from(tableProperties);
       BaseTable baseTable = new BaseKeyedTable.BaseInternalTable(tableIdentifier,
-          useArcticTableOperations(baseIcebergTable, baseLocation, fileIO, tableMetaStore.getConfiguration()),
+          useArcticTableOperations(baseIcebergTable, baseLocation, fileIO, tableMetaStore.getConfiguration(),
+                  lockManager),
           fileIO, client);
 
       Table changeIcebergTable = tableMetaStore.doAs(() -> {
@@ -546,7 +562,8 @@ public class BaseArcticCatalog implements ArcticCatalog {
         }
       });
       ChangeTable changeTable = new BaseKeyedTable.ChangeInternalTable(tableIdentifier,
-          useArcticTableOperations(changeIcebergTable, changeLocation, fileIO, tableMetaStore.getConfiguration()),
+          useArcticTableOperations(changeIcebergTable, changeLocation, fileIO, tableMetaStore.getConfiguration(),
+                  LockManagers.from(changeIcebergTable.properties())),
           fileIO, client);
       return new BaseKeyedTable(meta, tableLocation,
           primaryKeySpec, client, baseTable, changeTable);
@@ -568,7 +585,7 @@ public class BaseArcticCatalog implements ArcticCatalog {
       });
       ArcticFileIO fileIO = new ArcticHadoopFileIO(tableMetaStore);
       return new BaseUnkeyedTable(tableIdentifier, useArcticTableOperations(table, baseLocation, fileIO,
-          tableMetaStore.getConfiguration()), fileIO, client);
+          tableMetaStore.getConfiguration(), LockManagers.from(tableProperties)), fileIO, client);
     }
 
     private String getTableLocationForCreate() {

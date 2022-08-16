@@ -200,6 +200,12 @@
             <version>${hive.version}</version>
             <scope>test</scope>
         </dependency>
+
+        <!-- import org.apache.iceberg.hive.HiveClientPool; -->
+        <dependency>
+            <groupId>org.apache.iceberg</groupId>
+            <artifactId>iceberg-hive-metastore</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

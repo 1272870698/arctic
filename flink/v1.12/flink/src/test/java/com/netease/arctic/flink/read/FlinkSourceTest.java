@@ -66,8 +66,8 @@ public class FlinkSourceTest extends FlinkTestBase {
     append.commit();
   }
 
-  protected static void write(Collection<Object[]> data, Table table, RowType rowType) throws IOException {
-    try (TaskWriter<RowData> taskWriter = createTaskWriter(table, TARGET_FILE_SIZE, fileFormat, rowType)) {
+  protected static void write(Collection<Object[]> data, Table table, RowType rowType, boolean upsert) throws IOException {
+    try (TaskWriter<RowData> taskWriter = createTaskWriter(table, TARGET_FILE_SIZE, fileFormat, rowType, upsert)) {
       data.forEach(d -> {
         try {
           taskWriter.write(DataUtil.toRowData(d));
@@ -101,7 +101,7 @@ public class FlinkSourceTest extends FlinkTestBase {
     data.add(new Object[]{1000015, "e", LocalDateTime.parse("2022-06-18T10:10:11.0")});
 
     Collection<RowData> expectedRecords = DataUtil.toRowData(data);
-    write(data, testTable, FLINK_ROW_TYPE);
+    write(data, testTable, FLINK_ROW_TYPE, false);
 
     final CloseableIterator<RowData> resultIterator = com.netease.arctic.flink.table.FlinkSource.forRowData()
         .env(env)
@@ -137,7 +137,7 @@ public class FlinkSourceTest extends FlinkTestBase {
     data.add(new Object[]{1000015, "e", LocalDateTime.parse("2022-06-18T10:10:11.0")});
 
     Collection<RowData> expectedRecords = DataUtil.toRowData(data);
-    write(data, testTable, FLINK_ROW_TYPE);
+    write(data, testTable, FLINK_ROW_TYPE, false);
 
     DataStream<RowData> ds = com.netease.arctic.flink.table.FlinkSource.forRowData()
         .env(env)
@@ -187,7 +187,7 @@ public class FlinkSourceTest extends FlinkTestBase {
     s1.add(new Object[]{1000021, "d", LocalDateTime.parse("2022-06-18T10:10:11.0")});
     s1.add(new Object[]{1000015, "e", LocalDateTime.parse("2022-06-18T10:10:11.0")});
 
-    write(s1, testTable, FLINK_ROW_TYPE);
+    write(s1, testTable, FLINK_ROW_TYPE, false);
 
     List<Object[]> s2 = new LinkedList<>();
     s2.add(new Object[]{12, "ac", LocalDateTime.parse("2022-06-18T10:10:11.0")});
@@ -196,7 +196,7 @@ public class FlinkSourceTest extends FlinkTestBase {
     s2.add(new Object[]{26, "ae", LocalDateTime.parse("2022-06-19T10:10:11.0")});
 
     Collection<RowData> expectedRecords = DataUtil.toRowData(s2);
-    write(s2, testTable, FLINK_ROW_TYPE);
+    write(s2, testTable, FLINK_ROW_TYPE, false);
 
     testTable.refresh();
     Snapshot s = testTable.snapshots().iterator().next();

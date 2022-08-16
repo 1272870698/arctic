@@ -21,6 +21,7 @@ package com.netease.arctic.op;
 import com.netease.arctic.io.ArcticFileIO;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.iceberg.LockManager;
 import org.apache.iceberg.TableMetadata;
 import org.apache.iceberg.hadoop.HadoopTableOperations;
 
@@ -28,8 +29,8 @@ public class ArcticHadoopTableOperations extends HadoopTableOperations {
 
   private final ArcticFileIO arcticFileIO;
 
-  public ArcticHadoopTableOperations(Path location, ArcticFileIO fileIO, Configuration conf) {
-    super(location, fileIO, conf);
+  public ArcticHadoopTableOperations(Path location, ArcticFileIO fileIO, Configuration conf,  LockManager lockManager) {
+    super(location, fileIO, conf, lockManager);
     this.arcticFileIO = fileIO;
   }
 
